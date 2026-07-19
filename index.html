@@ -219,8 +219,8 @@
     background:var(--red); font-family:'Rubik'; font-weight:700; font-size:2.6vh;
     white-space:nowrap; z-index:2; letter-spacing:.04em;
   }
-  .ticker-viewport{flex:1; overflow:hidden; display:flex; align-items:center}
-  .ticker-track{display:flex; white-space:nowrap; width:max-content; will-change:transform; backface-visibility:hidden}
+  .ticker-viewport{flex:1; overflow:hidden; display:flex; align-items:center; direction:ltr}
+  .ticker-track{display:flex; white-space:nowrap; width:max-content; will-change:transform; backface-visibility:hidden; direction:ltr}
   .ticker-item{font-size:2.9vh; font-weight:600; padding:0 1.8vw; display:flex; align-items:center; flex:none}
   .ticker-item::after{content:""; width:1vh; height:1vh; background:var(--gold); margin-inline-start:1.8vw; flex:none; transform:rotate(45deg)}
   .status{
@@ -572,15 +572,16 @@ function renderTicker(items){ T.items = items||[]; buildTickerDOM(); }
 
 function buildTickerDOM(){
   if(!T.items.length){ tickerEl.innerHTML=""; stopTicker(); return; }
-  const unit = T.items.map(n=>`<span class="ticker-item">${esc(n.text)}</span>`).join("");
+  const unit = T.items.map(n=>`<span class="ticker-item" dir="rtl">${esc(n.text)}</span>`).join("");
   tickerEl.style.transform = "translate3d(0,0,0)";
   tickerEl.innerHTML = unit;                       // מדידה של יחידה בודדת
   const unitW = tickerEl.scrollWidth;
   if(!unitW){ setTimeout(buildTickerDOM, 300); return; }  // עוד אין פריסה — ננסה שוב
-  const copies = Math.max(2, Math.ceil((tickerVp.clientWidth*2 + unitW) / unitW));
+  const copies = Math.max(3, Math.ceil((tickerVp.clientWidth*2 + unitW) / unitW) + 1);
   tickerEl.innerHTML = unit.repeat(copies);
   T.unitW = unitW;
   if(T.pos > unitW) T.pos = 0;
+  tickerEl.style.transform = `translate3d(${(T.pos - unitW).toFixed(2)}px,0,0)`; // מצב פתיחה מלא, בלי הבהוב
   startTicker();
 }
 function startTicker(){ if(T.running) return; T.running=true; T.lastT=0; T.raf=requestAnimationFrame(stepTicker); }
@@ -591,8 +592,9 @@ function stepTicker(t){
   let dt=(t-T.lastT)/1000; T.lastT=t;
   if(dt>0.25) dt=0;                    // פריים ארוך / חזרה מרדמת — בלי קפיצה
   T.pos += dt*CONFIG.TICKER_SPEED;
-  if(T.pos>=T.unitW) T.pos-=T.unitW;
-  tickerEl.style.transform = `translate3d(${(-T.pos).toFixed(2)}px,0,0)`;
+  if(T.pos>=T.unitW) T.pos-=T.unitW;   // לולאה על יחידה אחת → חזרה על תוכן זהה, בלי קפיצה
+  /* תנועה ימינה: המסלול מוסט שמאלה ביחידה ומחליק חזרה ברצף */
+  tickerEl.style.transform = `translate3d(${(T.pos - T.unitW).toFixed(2)}px,0,0)`;
   T.raf = requestAnimationFrame(stepTicker);
 }
 /* מדידה חוזרת אחרי טעינת פונטים ובשינוי גודל — בלי לחסום */
