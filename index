@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>גף פלדה כחולה · שלוחת אשקלון — לוח מודעות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&family=Rubik:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A2A4E;
+    --navy2:#061C36;
+    --blue:#1C5FA8;
+    --sky:#EDF2F8;
+    --bg:#F5F7FA;
+    --card:#FFFFFF;
+    --line:#D3DCE6;
+    --ink:#12253C;
+    --muted:#5E7288;
+    --gold:#A8862F;
+    --green:#2F6B4F;
+    --red:#9E2B25;
+    --r:.4vh;               /* רדיוס אחיד, מרובע כמעט */
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:'Heebo',sans-serif; color:var(--ink); background:var(--bg);
+    overflow:hidden; display:flex; flex-direction:column;
+  }
+
+  /* ================= כותרת עליונה ================= */
+  header{
+    flex:none; height:11vh; display:flex; align-items:center; justify-content:space-between;
+    padding:0 2.2vw; color:#fff; background:var(--navy);
+    border-bottom:2px solid var(--gold);
+  }
+  .brand{display:flex; align-items:center; gap:1.2vw}
+  .roundel{width:6.4vh; height:6.4vh; flex:none}
+  .brand h1{font-family:'Rubik'; font-weight:600; font-size:3.2vh; letter-spacing:.02em}
+  .brand .sub{font-size:1.9vh; font-weight:300; opacity:.8; margin-top:.3vh; letter-spacing:.1em}
+  .timeblock{text-align:left}
+  .clock{
+    font-weight:300; font-size:6vh; line-height:1;
+    font-variant-numeric:tabular-nums; direction:ltr; letter-spacing:.02em;
+  }
+  .dates{font-size:2vh; font-weight:300; opacity:.85; margin-top:.5vh}
+  .dates b{font-weight:600}
+
+  /* פס התקדמות שקף */
+  .progress{flex:none; height:.5vh; background:var(--line)}
+  .progress i{display:block; height:100%; width:0; background:var(--navy)}
+  .progress i.run{animation:fill var(--slide-sec) linear forwards}
+  @keyframes fill{to{width:100%}}
+
+  /* ================= אזור השקפים ================= */
+  .stage{flex:1; position:relative; min-height:0}
+  .slide{
+    position:absolute; inset:0; padding:2.4vh 2.4vw; display:none;
+    flex-direction:column; min-height:0;
+  }
+  .slide.on{display:flex; animation:slideIn .5s ease both}
+  @keyframes slideIn{from{opacity:0} to{opacity:1}}
+
+  .slide-title{display:flex; align-items:baseline; gap:1.2vw; margin-bottom:2vh; flex:none}
+  .slide-title h2{font-family:'Rubik'; font-weight:600; font-size:3.6vh; color:var(--navy); letter-spacing:.02em}
+  .slide-title .range{font-size:2.1vh; color:var(--muted); font-weight:400}
+  .slide-title::after{content:""; flex:1; height:1px; background:var(--line); align-self:center}
+
+  /* ---------- לו"ז היום ---------- */
+  .today-list{flex:1; display:flex; flex-direction:column; gap:1.2vh; min-height:0}
+  .today-row{
+    display:flex; align-items:center; gap:1.4vw;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+    padding:1.6vh 1.6vw;
+  }
+  .t-time{
+    font-variant-numeric:tabular-nums; direction:ltr; font-weight:600; font-size:2.9vh;
+    color:var(--navy); background:var(--sky); border-radius:var(--r); padding:.5vh 1vw;
+    min-width:10ch; text-align:center; flex:none; border:1px solid var(--line);
+  }
+  .t-what{font-size:2.9vh; font-weight:500}
+  .t-note{font-size:2vh; color:var(--muted); font-weight:300; margin-inline-start:auto}
+  .now-chip{
+    display:none; font-size:1.8vh; font-weight:600; color:#fff; background:var(--gold);
+    border-radius:var(--r); padding:.3vh 1vw; margin-inline-start:1vw; flex:none; letter-spacing:.05em;
+  }
+  .today-row.now{border-color:var(--gold); border-right:.5vh solid var(--gold)}
+  .today-row.now .t-time{background:var(--navy); color:#fff; border-color:var(--navy)}
+  .today-row.now .now-chip{display:inline-block}
+  .today-row.past{opacity:.42}
+
+  /* ---------- לו"ז שבועי ---------- */
+  .daily-strip{
+    flex:none; display:flex; align-items:center; gap:1vw; margin-bottom:1.5vh;
+    background:var(--card); border:1px solid var(--line); border-right:.5vh solid var(--navy);
+    border-radius:var(--r); padding:1.1vh 1.4vw; font-size:2.2vh;
+  }
+  .daily-strip .lbl{font-weight:600; color:var(--navy); flex:none}
+  .week-grid{flex:1; display:grid; grid-template-columns:repeat(5,1fr); gap:1vw; min-height:0}
+  .day-col{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .day-head{flex:none; text-align:center; padding:1.2vh 0 1vh; background:var(--navy); color:#fff}
+  .day-head .dname{font-family:'Rubik'; font-weight:600; font-size:2.4vh}
+  .day-head .ddate{font-size:1.9vh; font-weight:300; opacity:.8; direction:ltr}
+  .day-col.today-col .day-head{background:var(--blue)}
+  .day-col.today-col{border-color:var(--blue)}
+  .day-items{flex:1; padding:1.2vh 1vw; display:flex; flex-direction:column; gap:1vh; overflow:hidden}
+  .w-item .w-time{font-variant-numeric:tabular-nums; direction:ltr; display:inline-block; font-weight:600; color:var(--blue); font-size:2vh}
+  .w-item .w-what{font-size:2.1vh; font-weight:500; line-height:1.3}
+  .w-empty{color:var(--muted); font-weight:300; font-size:2vh; text-align:center; margin-top:2vh}
+  .w-more{font-size:1.8vh; color:var(--muted); text-align:center}
+
+  /* ---------- חלוקת חנת"רים ---------- */
+  .hantar-grid{
+    flex:1; display:grid; grid-template-columns:1fr 1fr; gap:1.5vh 1.5vw;
+    align-content:center; min-height:0;
+  }
+  .hantar{
+    display:flex; align-items:center; gap:1.4vw;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+    padding:2vh 1.8vw;
+  }
+  .hantar .cls{
+    flex:none; font-family:'Rubik'; font-weight:600; font-size:2.6vh; color:#fff;
+    background:var(--navy); border-radius:var(--r); padding:.8vh 1.3vw; min-width:12ch; text-align:center;
+  }
+  .hantar .who{font-size:3vh; font-weight:600}
+
+  /* ---------- מזג אוויר ---------- */
+  .weather-grid{flex:1; display:grid; grid-template-columns:repeat(3,1fr); gap:1.4vw; align-content:center; min-height:0}
+  .wx-card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+    overflow:hidden; display:flex; flex-direction:column; text-align:center;
+  }
+  .wx-city{flex:none; background:var(--navy); color:#fff; font-family:'Rubik'; font-weight:600; font-size:2.9vh; padding:1.4vh 0}
+  .wx-body{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1vh; padding:2.5vh 0}
+  .wx-icon{width:8.5vh; height:8.5vh}
+  .wx-temp{font-size:7vh; font-weight:300; line-height:1; direction:ltr; color:var(--navy)}
+  .wx-temp b{font-weight:600}
+  .wx-desc{font-size:2.4vh; font-weight:500; color:var(--ink)}
+  .wx-minmax{font-size:2vh; color:var(--muted); direction:ltr}
+
+  /* ---------- משפט שבועי ---------- */
+  .quote-wrap{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:var(--navy); border-radius:var(--r);
+    color:#fff; text-align:center; padding:4vh 8vw;
+  }
+  .quote-rule{width:8vw; height:2px; background:var(--gold); flex:none}
+  .quote-text{
+    font-family:'Rubik'; font-weight:600; font-size:4.6vh; line-height:1.5; max-width:78vw;
+    margin:3.5vh 0;
+  }
+  .quote-src{font-size:2.4vh; font-weight:300; color:#BFCEDF; letter-spacing:.08em; margin-top:2.5vh}
+
+  /* ---------- משימות ---------- */
+  .tasks-wrap{flex:1; display:grid; grid-template-columns:1fr 1fr; gap:1.5vw; min-height:0}
+  .task-col{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+    padding:2vh 1.6vw; display:flex; flex-direction:column; gap:1.3vh; overflow:hidden;
+  }
+  .task-col h3{
+    font-family:'Rubik'; font-weight:600; font-size:2.6vh; color:var(--navy);
+    padding-bottom:1vh; border-bottom:1px solid var(--line); flex:none;
+  }
+  .task{display:flex; align-items:center; gap:1vw; font-size:2.6vh}
+  .task .box{
+    width:2.9vh; height:2.9vh; flex:none; border-radius:var(--r);
+    border:2px solid var(--navy); display:grid; place-items:center; background:#fff;
+  }
+  .task.done .box{background:var(--green); border-color:var(--green)}
+  .task.done .box::after{content:"✓"; color:#fff; font-weight:700; font-size:2.1vh}
+  .task.done .task-name{color:var(--muted); text-decoration:line-through}
+  .task-name{flex:1; font-weight:500}
+  .task-owner{font-size:1.9vh; color:var(--navy); background:var(--sky); border:1px solid var(--line); border-radius:var(--r); padding:.3vh 1vw; font-weight:500; white-space:nowrap}
+
+  /* ---------- עדכונים ---------- */
+  .updates-wrap{flex:1; display:flex; flex-direction:column; gap:1.4vh; min-height:0}
+  .update{
+    background:var(--card); border:1px solid var(--line); border-right:.5vh solid var(--navy);
+    border-radius:var(--r); padding:1.8vh 1.6vw;
+  }
+  .update h3{font-size:2.8vh; font-weight:600; color:var(--navy); margin-bottom:.6vh}
+  .update p{font-size:2.4vh; font-weight:400; line-height:1.5}
+  .update .when{font-size:1.9vh; color:var(--muted); margin-top:.8vh}
+  .update.important{border-right-color:var(--red)}
+  .update.important h3{color:var(--red)}
+
+  .empty-big{flex:1; display:grid; place-items:center; color:var(--muted); font-size:3vh; font-weight:300}
+
+  /* ================= תחתית ================= */
+  .dots{flex:none; display:flex; justify-content:center; gap:.8vw; padding:.9vh 0}
+  .dots i{width:1vh; height:1vh; border-radius:50%; background:var(--line)}
+  .dots i.on{background:var(--navy)}
+
+  footer{flex:none; height:6.6vh; display:flex; align-items:stretch; background:var(--navy2); color:#fff}
+  .ticker-label{
+    display:flex; align-items:center; padding:0 1.6vw;
+    background:var(--red); font-family:'Rubik'; font-weight:600; font-size:2.3vh;
+    white-space:nowrap; z-index:2; letter-spacing:.04em;
+  }
+  .ticker-viewport{
+    flex:1; overflow:hidden; display:flex; align-items:center;
+    contain:strict;
+  }
+  .ticker-track{
+    display:flex; white-space:nowrap; width:max-content;
+    will-change:transform; backface-visibility:hidden;
+  }
+  .ticker-item{font-size:2.6vh; font-weight:400; padding:0 1.8vw; display:flex; align-items:center; flex:none}
+  .ticker-item::after{content:""; width:.9vh; height:.9vh; background:var(--gold); margin-inline-start:1.8vw; flex:none; transform:rotate(45deg)}
+  .status{
+    display:flex; align-items:center; padding:0 1.2vw; font-size:1.7vh;
+    color:#A8BBD1; white-space:nowrap; border-inline-start:1px solid rgba(255,255,255,.12);
+  }
+  .status .ok{color:#7BBF97} .status .err{color:#D98A83}
+
+  @media (prefers-reduced-motion:reduce){
+    .slide.on{animation:none} .progress i.run{animation:none; width:100%}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg class="roundel" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="46" fill="#fff"/>
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#1C5FA8" stroke-width="6"/>
+      <path d="M50 22 L66 50 L34 50 Z M50 78 L34 50 L66 50 Z" fill="none" stroke="#0A2A4E" stroke-width="5" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <h1 id="unitName">גף פלדה כחולה</h1>
+      <div class="sub" id="unitSub">חיל האוויר · שלוחת אשקלון</div>
+    </div>
+  </div>
+  <div class="timeblock">
+    <div class="clock" id="clock">--:--</div>
+    <div class="dates"><b id="dayName"></b> · <span id="gregDate"></span> · <span id="hebDate"></span></div>
+  </div>
+</header>
+
+<div class="progress"><i id="progressBar"></i></div>
+<div class="stage" id="stage"></div>
+<div class="dots" id="dots"></div>
+
+<footer>
+  <div class="ticker-label">מבזקים · ynet</div>
+  <div class="ticker-viewport" id="tickerViewport"><div class="ticker-track" id="ticker"></div></div>
+  <div class="status" id="status">מתחבר…</div>
+</footer>
+
+<script>
+/* ================== הגדרות ================== */
+const CONFIG = {
+  API_URL: "",              // ← הדבק כאן את כתובת ה-Web App מ-Google Apps Script
+  UNIT_NAME: "גף פלדה כחולה",
+  UNIT_SUB: "חיל האוויר · שלוחת אשקלון",
+  SLIDE_SEC: 18,
+  REFRESH_SEC: 60,
+  TICKER_SPEED: 85,         // פיקסלים לשנייה
+  MAX_TODAY: 7,
+  MAX_PER_DAY: 5,
+  MAX_UPDATES: 3,
+  RELOAD_HOUR: 3
+};
+
+const DAY_NAMES = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+
+/* נתוני הדגמה — מוצגים רק כשאין API_URL */
+const DEMO_DATA = {
+  schedule: [
+    {day:"כל יום", time:"08:30", what:"ישיבת בוקר — סבב עדכונים", note:"חדר ישיבות"},
+    {day:"ראשון", time:"10:00", what:"שיחות מועמדים", note:"רכז לידים"},
+    {day:"שני",   time:"09:30", what:"סיור בית ספר — אורט אשקלון", note:""},
+    {day:"שלישי", time:"11:00", what:"ריאיונות מיון", note:""},
+    {day:"רביעי", time:"10:00", what:"ביקורת מפקד הגף", note:"נוכחות מלאה"},
+    {day:"חמישי", time:"13:00", what:"סיכום שבוע", note:""}
+  ],
+  hantarim: [
+    {cls:"כיתה ט׳3", who:"שם החנת״ר"},
+    {cls:"כיתה ט׳5", who:"שם החנת״ר"},
+    {cls:"כיתה י׳2", who:"שם החנת״ר"},
+    {cls:"כיתה י׳5", who:"שם החנת״ר"},
+    {cls:"כיתה יא׳2", who:"שם החנת״ר"},
+    {cls:"כיתה יב׳2", who:"שם החנת״ר"},
+    {cls:"מכללה", who:"שם החנת״ר"}
+  ],
+  tasks: [
+    {name:"עדכון מצבת נוכחות", freq:"יומי", owner:"תורן", done:true},
+    {name:"מענה ללידים חדשים", freq:"יומי", owner:"רכז", done:false},
+    {name:"דוח סיכום שבועי למפקדה", freq:"שבועי", owner:"מק״ס", done:false}
+  ],
+  updates: [
+    {title:"ביקורת מפקד הגף", body:"ביום רביעי בשעה 10:00. נא לוודא סדר במרחבי העבודה.", date:"14.07", important:true},
+    {title:"התרמת דם", body:"נקודת התרמה תפעל ביום חמישי בין 09:00–13:00.", date:"12.07"}
+  ],
+  weather: [
+    {city:"אשקלון", temp:29, code:0, min:24, max:31},
+    {city:"חיפה", temp:28, code:2, min:25, max:30},
+    {city:"באר שבע", temp:33, code:0, min:22, max:36}
+  ],
+  quote: {text:"הטובים לטיס — והמצוינים לקרקע שמאחוריהם", source:"משפט השבוע"},
+  news: [
+    {text:"כאן יופיעו מבזקים אמיתיים מ-ynet לאחר חיבור ל-Apps Script"},
+    {text:"הראנר מתעדכן אוטומטית כל עשר דקות"}
+  ]
+};
+
+/* ================== שעון ותאריך ================== */
+const hebDateFmt = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", {day:"numeric", month:"long", year:"numeric"});
+const p = x => String(x).padStart(2,"0");
+function tickClock(){
+  const n = new Date();
+  document.getElementById("clock").textContent = `${p(n.getHours())}:${p(n.getMinutes())}`;
+  document.getElementById("dayName").textContent = "יום " + DAY_NAMES[n.getDay()];
+  document.getElementById("gregDate").textContent = `${p(n.getDate())}.${p(n.getMonth()+1)}.${n.getFullYear()}`;
+  document.getElementById("hebDate").textContent = hebDateFmt.format(n);
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* ================== עזרים ================== */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const byTime = (a,b) => String(a.time).localeCompare(String(b.time));
+const toMin = t => { const m=/^(\d{1,2}):(\d{2})/.exec(t||""); return m ? +m[1]*60 + +m[2] : null; };
+function weekDates(){
+  const n = new Date();
+  const shift = (n.getDay() >= 5) ? 7 : 0;   /* בשישי/שבת — השבוע הבא */
+  const sunday = new Date(n); sunday.setDate(n.getDate() - n.getDay() + shift);
+  return Array.from({length:5}, (_,i)=>{ const d=new Date(sunday); d.setDate(sunday.getDate()+i); return d; });
+}
+const fmtShort = d => `${p(d.getDate())}.${p(d.getMonth()+1)}`;
+const sameDay = (a,b) => a.toDateString() === b.toDateString();
+
+/* אייקוני מזג אוויר בקו נקי (WMO codes) */
+function wxInfo(code){
+  const icons = {
+    sun:   '<circle cx="32" cy="32" r="12" fill="none" stroke="#A8862F" stroke-width="3.5"/><g stroke="#A8862F" stroke-width="3.5" stroke-linecap="round"><line x1="32" y1="7" x2="32" y2="14"/><line x1="32" y1="50" x2="32" y2="57"/><line x1="7" y1="32" x2="14" y2="32"/><line x1="50" y1="32" x2="57" y2="32"/><line x1="14" y1="14" x2="19" y2="19"/><line x1="45" y1="45" x2="50" y2="50"/><line x1="50" y1="14" x2="45" y2="19"/><line x1="19" y1="45" x2="14" y2="50"/></g>',
+    partly:'<circle cx="24" cy="23" r="9" fill="none" stroke="#A8862F" stroke-width="3.5"/><path d="M20 47a10 10 0 0 1 1-20 13 13 0 0 1 25 3 8 8 0 0 1-1 17Z" fill="#fff" stroke="#1C5FA8" stroke-width="3"/>',
+    cloud: '<path d="M18 48a11 11 0 0 1 1-22 15 15 0 0 1 29 4 9 9 0 0 1-2 18Z" fill="none" stroke="#1C5FA8" stroke-width="3.5"/>',
+    rain:  '<path d="M18 40a11 11 0 0 1 1-22 15 15 0 0 1 29 4 9 9 0 0 1-2 18Z" fill="none" stroke="#1C5FA8" stroke-width="3.5"/><g stroke="#1C5FA8" stroke-width="3.5" stroke-linecap="round"><line x1="22" y1="47" x2="19" y2="56"/><line x1="34" y1="47" x2="31" y2="56"/><line x1="46" y1="47" x2="43" y2="56"/></g>',
+    storm: '<path d="M18 38a11 11 0 0 1 1-22 15 15 0 0 1 29 4 9 9 0 0 1-2 18Z" fill="none" stroke="#1C5FA8" stroke-width="3.5"/><path d="M34 38 26 50h7l-4 10 12-14h-7l4-8Z" fill="none" stroke="#A8862F" stroke-width="3" stroke-linejoin="round"/>',
+    fog:   '<g stroke="#5E7288" stroke-width="3.5" stroke-linecap="round"><line x1="12" y1="26" x2="52" y2="26"/><line x1="16" y1="36" x2="48" y2="36"/><line x1="12" y1="46" x2="52" y2="46"/></g>'
+  };
+  let icon="sun", desc="בהיר";
+  if(code===1||code===2){icon="partly"; desc="מעונן חלקית";}
+  else if(code===3){icon="cloud"; desc="מעונן";}
+  else if(code===45||code===48){icon="fog"; desc="ערפל";}
+  else if(code>=51&&code<=57){icon="rain"; desc="טפטוף";}
+  else if((code>=61&&code<=67)||(code>=80&&code<=82)){icon="rain"; desc="גשום";}
+  else if(code>=95){icon="storm"; desc="סופות רעמים";}
+  return {svg:`<svg class="wx-icon" viewBox="0 0 64 64">${icons[icon]}</svg>`, desc};
+}
+
+/* ================== בניית שקפים ================== */
+function slideToday(data){
+  const today = DAY_NAMES[new Date().getDay()];
+  let rows = (data.schedule||[]).filter(r => r.day===today || r.day==="כל יום").sort(byTime);
+  if(!rows.length) return `<div class="slide-title"><h2>לו״ז היום</h2><span class="range">יום ${today}</span></div>
+    <div class="empty-big">אין פעילויות מתוכננות להיום</div>`;
+  const extra = rows.length - CONFIG.MAX_TODAY;
+  rows = rows.slice(0, CONFIG.MAX_TODAY);
+  return `<div class="slide-title"><h2>לו״ז היום</h2><span class="range">יום ${today} · ${fmtShort(new Date())}</span></div>
+    <div class="today-list">` +
+    rows.map(r=>`<div class="today-row" data-min="${toMin(r.time) ?? ""}">
+        <span class="t-time">${esc(r.time)}</span>
+        <span class="t-what">${esc(r.what)}</span>
+        <span class="now-chip">עכשיו</span>
+        ${r.note ? `<span class="t-note">${esc(r.note)}</span>` : ""}
+      </div>`).join("") +
+    (extra>0 ? `<div class="w-more">+ עוד ${extra} פעילויות</div>` : "") +
+    `</div>`;
+}
+
+/* מסמן "עכשיו"/"עבר" בלי לבנות מחדש את השקף */
+function markNow(){
+  const rows = [...document.querySelectorAll(".today-row")];
+  if(!rows.length) return;
+  const nowMin = new Date().getHours()*60 + new Date().getMinutes();
+  let nowIdx = -1;
+  rows.forEach((el,i)=>{ const m=el.dataset.min; if(m!=="" && +m<=nowMin) nowIdx=i; });
+  rows.forEach((el,i)=>{
+    el.classList.toggle("now", i===nowIdx);
+    el.classList.toggle("past", el.dataset.min!=="" && +el.dataset.min<nowMin && i!==nowIdx);
+  });
+}
+
+function slideWeek(data){
+  const dates = weekDates();
+  const range = `${fmtShort(dates[0])} – ${fmtShort(dates[4])}`;
+  const daily = (data.schedule||[]).filter(r => r.day==="כל יום").sort(byTime);
+  const now = new Date();
+  const cols = dates.map((d,i)=>{
+    const dn = DAY_NAMES[i];
+    let items = (data.schedule||[]).filter(r => r.day===dn).sort(byTime);
+    const extra = items.length - CONFIG.MAX_PER_DAY;
+    items = items.slice(0, CONFIG.MAX_PER_DAY);
+    return `<div class="day-col ${sameDay(d,now)?"today-col":""}">
+      <div class="day-head"><div class="dname">${dn}</div><div class="ddate">${fmtShort(d)}</div></div>
+      <div class="day-items">` +
+      (items.length
+        ? items.map(r=>`<div class="w-item"><span class="w-time">${esc(r.time)}</span> <span class="w-what">${esc(r.what)}</span></div>`).join("")
+        : `<div class="w-empty">—</div>`) +
+      (extra>0 ? `<div class="w-more">+ ${extra} נוספים</div>` : "") +
+      `</div></div>`;
+  }).join("");
+  return `<div class="slide-title"><h2>לו״ז שבועי</h2><span class="range">${range}</span></div>` +
+    (daily.length ? `<div class="daily-strip"><span class="lbl">קבוע בכל יום:</span>
+      <span>${daily.map(r=>`${esc(r.time)} ${esc(r.what)}`).join("  ·  ")}</span></div>` : "") +
+    `<div class="week-grid">${cols}</div>`;
+}
+
+function slideHantarim(data){
+  const rows = data.hantarim||[];
+  if(!rows.length) return null;
+  return `<div class="slide-title"><h2>חלוקת חנת״רים</h2><span class="range">שלוחת אשקלון</span></div>
+    <div class="hantar-grid">` +
+    rows.map(h=>`<div class="hantar"><span class="cls">${esc(h.cls)}</span><span class="who">${esc(h.who)}</span></div>`).join("") +
+    `</div>`;
+}
+
+function slideWeather(data){
+  const rows = data.weather||[];
+  if(!rows.length) return null;
+  return `<div class="slide-title"><h2>מזג האוויר</h2><span class="range">עדכון שוטף</span></div>
+    <div class="weather-grid">` +
+    rows.map(w=>{
+      const info = wxInfo(w.code);
+      return `<div class="wx-card">
+        <div class="wx-city">${esc(w.city)}</div>
+        <div class="wx-body">
+          ${info.svg}
+          <div class="wx-temp"><b>${Math.round(w.temp)}</b>°</div>
+          <div class="wx-desc">${info.desc}</div>
+          <div class="wx-minmax">${Math.round(w.min)}° / ${Math.round(w.max)}°</div>
+        </div>
+      </div>`;
+    }).join("") + `</div>`;
+}
+
+function slideQuote(data){
+  const q = data.quote;
+  if(!q || !q.text) return null;
+  return `<div class="quote-wrap">
+    <div class="quote-rule"></div>
+    <div class="quote-text">${esc(q.text)}</div>
+    <div class="quote-rule"></div>
+    ${q.source ? `<div class="quote-src">${esc(q.source)}</div>` : ""}
+  </div>`;
+}
+
+function slideTasks(data){
+  const rows = data.tasks||[];
+  if(!rows.length) return null;
+  const col = (title, list) => `<div class="task-col"><h3>${title}</h3>` +
+    (list.length ? list.map(t=>`<div class="task ${t.done?"done":""}">
+      <span class="box"></span><span class="task-name">${esc(t.name)}</span>
+      ${t.owner?`<span class="task-owner">${esc(t.owner)}</span>`:""}
+    </div>`).join("") : `<div class="w-empty">אין משימות</div>`) + `</div>`;
+  return `<div class="slide-title"><h2>משימות</h2></div>
+    <div class="tasks-wrap">${col("משימות יומיות", rows.filter(t=>t.freq==="יומי"))}${col("משימות שבועיות", rows.filter(t=>t.freq!=="יומי"))}</div>`;
+}
+
+function slideUpdates(data){
+  const rows = (data.updates||[]).slice(0, CONFIG.MAX_UPDATES);
+  if(!rows.length) return null;
+  return `<div class="slide-title"><h2>עדכונים</h2></div>
+    <div class="updates-wrap">` +
+    rows.map(u=>`<div class="update ${u.important?"important":""}">
+      <h3>${esc(u.title)}</h3><p>${esc(u.body)}</p>
+      ${u.date?`<div class="when">${esc(u.date)}</div>`:""}
+    </div>`).join("") + `</div>`;
+}
+
+/* ================== מנוע השקפים ================== */
+let slides = [], slideIdx = 0, slideTimer = null;
+const stage = document.getElementById("stage");
+
+function buildSlides(data){
+  const defs = [
+    slideToday(data), slideWeek(data), slideHantarim(data),
+    slideTasks(data), slideUpdates(data), slideWeather(data), slideQuote(data)
+  ].filter(Boolean);
+  const keepIdx = Math.min(slideIdx, defs.length-1);
+  stage.innerHTML = defs.map(h=>`<section class="slide">${h}</section>`).join("");
+  slides = [...stage.children];
+  document.getElementById("dots").innerHTML = slides.map((_,i)=>`<i class="${i===keepIdx?"on":""}"></i>`).join("");
+  markNow();
+  showSlide(keepIdx);
+}
+
+function showSlide(i){
+  slideIdx = i;
+  slides.forEach((s,j)=>s.classList.toggle("on", j===i));
+  [...document.getElementById("dots").children].forEach((d,j)=>d.classList.toggle("on", j===i));
+  const bar = document.getElementById("progressBar");
+  bar.classList.remove("run"); void bar.offsetWidth;
+  bar.style.setProperty("--slide-sec", CONFIG.SLIDE_SEC+"s");
+  bar.classList.add("run");
+}
+function startLoop(){
+  clearInterval(slideTimer);
+  slideTimer = setInterval(()=>{ showSlide((slideIdx+1)%slides.length); }, CONFIG.SLIDE_SEC*1000);
+}
+setInterval(markNow, 30000);
+
+/* ================== ראנר — מנוע חלק מבוסס requestAnimationFrame ==================
+   עקרונות:
+   - מדידה רק אחרי שהפונטים נטענו (מדידה מוקדמת = רוחב שגוי = קפיצות)
+   - התוכן משוכפל עד שהוא רחב מספיק ללולאה רציפה ללא פערים
+   - התנועה מחושבת לפי זמן אמיתי (dt), כך שגם פספוס פריימים לא גורם לקפיצה
+   - translate3d על שכבת GPU; שום דבר לא מאפס את הריצה חוץ ממבזקים חדשים */
+const ticker = { raf:null, unitW:0, pos:0, lastT:0, items:[] };
+
+function renderTicker(items){
+  ticker.items = items || [];
+  rebuildTicker();
+}
+
+async function rebuildTicker(){
+  const track = document.getElementById("ticker");
+  const vp = document.getElementById("tickerViewport");
+  if(ticker.raf){ cancelAnimationFrame(ticker.raf); ticker.raf = null; }
+  if(!ticker.items.length){ track.innerHTML = ""; return; }
+
+  try{ await document.fonts.ready; }catch(e){}
+
+  const unit = ticker.items.map(n=>`<span class="ticker-item">${esc(n.text)}</span>`).join("");
+  track.innerHTML = unit;
+  const unitW = track.scrollWidth;
+  if(!unitW){ return; } /* עדיין אין פריסה — הרענון הבא יטפל */
+
+  /* משכפלים עד שהמסלול מכסה את החלון + עותק אחד מלא */
+  const copies = Math.max(2, Math.ceil(vp.clientWidth / unitW) + 1);
+  track.innerHTML = unit.repeat(copies);
+  ticker.unitW = unitW;
+  ticker.pos = 0;
+  ticker.lastT = 0;
+  ticker.raf = requestAnimationFrame(tickerStep);
+}
+
+function tickerStep(t){
+  if(!ticker.lastT) ticker.lastT = t;
+  let dt = (t - ticker.lastT) / 1000;
+  ticker.lastT = t;
+  if(dt > 0.5) dt = 0; /* חזרה מטאב רדום — בלי זינוק */
+  ticker.pos = (ticker.pos + dt * CONFIG.TICKER_SPEED) % ticker.unitW;
+  document.getElementById("ticker").style.transform =
+    `translate3d(${(ticker.pos - ticker.unitW).toFixed(2)}px, 0, 0)`;
+  ticker.raf = requestAnimationFrame(tickerStep);
+}
+
+let resizeT = null;
+window.addEventListener("resize", ()=>{
+  clearTimeout(resizeT);
+  resizeT = setTimeout(rebuildTicker, 400);
+});
+
+/* ================== משיכת נתונים ==================
+   כל עוד המסד לא השתנה — המסך לא נבנה מחדש. */
+let lastDataKey = "", lastNewsKey = "";
+async function refresh(){
+  const status = document.getElementById("status");
+  if(!CONFIG.API_URL){
+    applyData(DEMO_DATA);
+    status.innerHTML = 'מצב הדגמה — <span class="err">לא הוגדר API</span>';
+    return;
+  }
+  try{
+    const res = await fetch(CONFIG.API_URL, {redirect:"follow"});
+    const data = await res.json();
+    applyData(data);
+    const n = new Date();
+    status.innerHTML = `<span class="ok">●</span>&nbsp;עודכן ${p(n.getHours())}:${p(n.getMinutes())}`;
+  }catch(e){
+    status.innerHTML = '<span class="err">●</span>&nbsp;שגיאת חיבור — מציג נתונים אחרונים';
+  }
+}
+function applyData(d){
+  const dataKey = JSON.stringify([d.schedule, d.hantarim, d.tasks, d.updates, d.weather, d.quote]);
+  if(dataKey !== lastDataKey){ lastDataKey = dataKey; buildSlides(d); }
+  const newsKey = JSON.stringify((d.news||[]).map(n=>n.text));
+  if(newsKey !== lastNewsKey){ lastNewsKey = newsKey; renderTicker(d.news); }
+}
+
+document.getElementById("unitName").textContent = CONFIG.UNIT_NAME;
+document.getElementById("unitSub").textContent = CONFIG.UNIT_SUB;
+refresh().then(startLoop);
+setInterval(refresh, CONFIG.REFRESH_SEC*1000);
+setInterval(()=>{ const n=new Date(); if(n.getHours()===CONFIG.RELOAD_HOUR && n.getMinutes()===0) location.reload(); }, 60000);
+</script>
+</body>
+</html>
