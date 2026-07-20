@@ -143,8 +143,9 @@
     border-radius:var(--r); padding:3vh 3vw; text-align:center; min-width:24vw;
   }
   .bday-name{font-family:'Rubik'; font-weight:700; font-size:4.6vh; color:var(--navy)}
+  .bday-class{font-size:2.8vh; font-weight:700; color:var(--blue); margin-top:1vh}
   .bday-date{font-size:2.8vh; font-weight:600; color:var(--ink); margin-top:1vh; direction:ltr}
-  .bday-when{font-size:2.4vh; font-weight:600; color:var(--gold); margin-top:1vh}
+  .bday-when{font-size:2.6vh; font-weight:600; color:var(--gold); margin-top:1vh}
   .bday-icon{width:8vh; height:8vh; margin:0 auto 1vh}
 
   /* ---------- מזג אוויר ---------- */
@@ -321,14 +322,36 @@ const DEMO_DATA = {
 };
 
 /* ================== שעון ותאריך ================== */
-const hebDateFmt = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", {day:"numeric", month:"long", year:"numeric"});
 const p = x => String(x).padStart(2,"0");
+
+/* המרת מספר לאותיות עבריות (גימטריה) — לימים ולשנה */
+function gematria(n){
+  const ones = ["","א","ב","ג","ד","ה","ו","ז","ח","ט"];
+  const tens = ["","י","כ","ל","מ","נ","ס","ע","פ","צ"];
+  const huns = ["","ק","ר","ש","ת","תק","תר","תש","תת","תתק"];
+  let s = huns[Math.floor(n/100)] || "";
+  let r = n % 100;
+  if(r === 15) s += "טו";
+  else if(r === 16) s += "טז";
+  else { s += tens[Math.floor(r/10)] || ""; s += ones[r%10] || ""; }
+  /* גרש / גרשיים */
+  if(s.length === 1) return s + "׳";
+  if(s.length > 1)  return s.slice(0,-1) + "״" + s.slice(-1);
+  return s;
+}
+function hebrewDateHe(date){
+  const monthName = new Intl.DateTimeFormat("he-u-ca-hebrew", {month:"long"}).format(date);
+  const enDay  = +new Intl.DateTimeFormat("en-u-ca-hebrew", {day:"numeric"}).format(date);
+  const enYear = +new Intl.DateTimeFormat("en-u-ca-hebrew", {year:"numeric"}).format(date);
+  return `${gematria(enDay)} ב${monthName} ${gematria(enYear % 1000)}`;
+}
+
 function tickClock(){
   const n = new Date();
-  document.getElementById("clock").textContent = `${p(n.getHours())}:${p(n.getMinutes())}`;
+  document.getElementById("clock").textContent = `${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
   document.getElementById("dayName").textContent = "יום " + DAY_NAMES[n.getDay()];
   document.getElementById("gregDate").textContent = `${p(n.getDate())}.${p(n.getMonth()+1)}.${n.getFullYear()}`;
-  document.getElementById("hebDate").textContent = hebDateFmt.format(n);
+  document.getElementById("hebDate").textContent = hebrewDateHe(n);
 }
 setInterval(tickClock, 1000); tickClock();
 
@@ -459,16 +482,18 @@ function slideBirthday(data){
   const soon = withNext.filter(b=>b.diff===minDiff).slice(0, CONFIG.MAX_BDAY);
   const isToday = minDiff===0;
   const lead = isToday
-    ? `<div class="bday-lead today">מזל טוב! היום חוגגים יום הולדת</div>`
-    : `<div class="bday-lead">יום ההולדת הקרוב${soon.length>1?"":""} — בעוד ${minDiff} ימים</div>`;
+    ? `<div class="bday-lead today">מזל טוב! חוגגים היום יום הולדת</div>`
+    : `<div class="bday-lead">יום ההולדת הקרוב — בעוד ${minDiff} ימים</div>`;
   const cards = soon.map(b=>{
+    const clsLine = b.cls ? `<div class="bday-class">מכיתה ${esc(b.cls)}</div>` : "";
+    const ageTxt  = b.age ? `חוגג/ת גיל ${b.age}` : "";
     const whenTxt = isToday
-      ? (b.age ? `חוגג/ת גיל ${b.age}` : "היום!")
-      : `${b.day} ב${MONTHS_HE[b.month-1]}${b.age?` · גיל ${b.age}`:""}`;
+      ? (ageTxt || "היום!")
+      : `${b.day} ב${MONTHS_HE[b.month-1]}${b.age?` · ${ageTxt}`:""}`;
     return `<div class="bday-card">
       ${cakeSVG}
       <div class="bday-name">${esc(b.name)}</div>
-      <div class="bday-date">${p(b.day)}.${p(b.month)}</div>
+      ${clsLine}
       <div class="bday-when">${whenTxt}</div>
     </div>`;
   }).join("");
