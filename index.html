@@ -365,7 +365,7 @@ const CONFIG = {
   RELOAD_HOUR: 3,
   ALERT: {
     ENABLED: true,
-    WS_URL: "wss://ws.tzevaadom.co.il/socket?platform=WEB",
+    POLL_SEC: 6,          // כל כמה שניות המסך בודק התראה (דרך ה-Apps Script)
     AREAS: ["אשקלון"],   // ערים שמפעילות השתלטות. ריק [] + MATCH_ALL:true = כל הארץ
     MATCH_ALL: false,     // true = הצג כל אזעקה בארץ
     SHELTER_MIN: 10,      // כמה דקות ההשתלטות נשארת על המסך
@@ -795,30 +795,22 @@ function setAlertConn(ok){
   document.getElementById("alertConnTxt").textContent = ok ? "התרעות ✓" : "התרעות ✗";
 }
 
-/* חיבור WebSocket עם חיבור-מחדש אוטומטי */
-let alertWS = null, wsReconnect = null;
-function connectAlerts(){
-  if(!CONFIG.ALERT.ENABLED) return;
-  try{ alertWS = new WebSocket(CONFIG.ALERT.WS_URL); }
-  catch(e){ setAlertConn(false); scheduleReconnect(); return; }
-  alertWS.onopen    = ()=> setAlertConn(true);
-  alertWS.onmessage = e => handleAlertMessage(e.data);
-  alertWS.onerror   = ()=>{ try{ alertWS.close(); }catch(e){} };
-  alertWS.onclose   = ()=>{ setAlertConn(false); scheduleReconnect(); };
-}
-function scheduleReconnect(){ clearTimeout(wsReconnect); wsReconnect = setTimeout(connectAlerts, 4000); }
-
-/* פענוח הודעה — עמיד לשינויי מבנה */
-function handleAlertMessage(raw){
-  let msg; try{ msg = JSON.parse(raw); }catch(e){ return; }
-  const type = String(msg.type || msg.notificationType || "").toUpperCase();
-  if(type && type.indexOf("ALERT") === -1 && type !== "") return; // מתעלמים מהודעות מערכת/ping
-  const data = msg.data || msg;
-  const cities = data.cities || data.Cities || [];
-  if(!Array.isArray(cities) || !cities.length) return;
-  const threat = (typeof data.threat === "number") ? data.threat : 0;
-  const isDrill = !!(data.isDrill || data.is_drill);
-  triggerAlert(cities, threat, isDrill);
+/* תשאול התראות דרך ה-Apps Script (עוקף את חסימת ה-CORS של צופר) */
+let lastAlertId = "";
+async function pollAlerts(){
+  if(!CONFIG.ALERT.ENABLED || !CONFIG.API_URL) return;
+  try{
+    const url = CONFIG.API_URL + (CONFIG.API_URL.includes("?") ? "&" : "?") + "alerts=1";
+    const res = await fetch(url, {redirect:"follow"});
+    const a = await res.json();
+    setAlertConn(a && a.ok !== false);   // ✓ רק אם גם צופר נענה בצד השרת
+    if(a && a.active && Array.isArray(a.cities) && a.cities.length){
+      if(String(a.id) !== lastAlertId){
+        lastAlertId = String(a.id);
+        triggerAlert(a.cities, a.threat, a.isDrill);
+      }
+    }
+  }catch(e){ setAlertConn(false); }
 }
 
 /* סינון לאזורים שהוגדרו */
@@ -867,7 +859,8 @@ document.addEventListener("keydown", e=>{
   else if(k === "c" || e.key === "Escape"){ clearAlert(); }
 });
 
-connectAlerts();
+setInterval(pollAlerts, CONFIG.ALERT.POLL_SEC * 1000);
+pollAlerts();
 
 document.getElementById("unitName").textContent = CONFIG.UNIT_NAME;
 document.getElementById("unitSub").textContent = CONFIG.UNIT_SUB;
