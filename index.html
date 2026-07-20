@@ -241,8 +241,55 @@
   #fsGate p{font-size:2.6vh; font-weight:500; color:#B9CCE2}
   #fsGate .key{background:#fff; color:var(--navy2); border-radius:var(--r); padding:.3vh 1.2vw; font-weight:700; font-family:'Rubik'}
 
+  /* ================= השתלטות התרעה ================= */
+  #alertOverlay{
+    position:fixed; inset:0; z-index:100; display:none; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:4vh 6vw;
+    color:#fff; background:linear-gradient(160deg,#7E1620,#4A0C13);
+  }
+  #alertOverlay.on{display:flex; animation:alertIn .3s ease both}
+  @keyframes alertIn{from{opacity:0} to{opacity:1}}
+  #alertOverlay::before{
+    content:""; position:absolute; inset:0; background:#000; opacity:0; pointer-events:none;
+    animation:alertPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes alertPulse{0%,100%{opacity:0} 50%{opacity:.16}}   /* פעימה איטית ומכובדת, לא מהבהבת */
+  .alert-top{
+    position:absolute; top:4.5vh; display:flex; align-items:center; gap:1vw;
+    font-family:'Rubik'; font-weight:700; font-size:2.8vh; letter-spacing:.12em; color:#F4CBC6;
+  }
+  .alert-top svg{width:4vh; height:4vh}
+  .alert-drill{
+    position:absolute; top:4.5vh; inset-inline-end:5vw;
+    font-family:'Rubik'; font-weight:700; font-size:2.4vh; letter-spacing:.1em;
+    background:#fff; color:#7E1620; border-radius:.4vh; padding:.4vh 1.4vw; display:none;
+  }
+  #alertOverlay.drill .alert-drill{display:block}
+  .alert-threat{font-family:'Rubik'; font-weight:800; font-size:11vh; line-height:1; letter-spacing:.01em}
+  .alert-threat-sub{font-size:3.6vh; font-weight:500; margin-top:1vh; color:#F4CBC6}
+  .alert-area{
+    font-family:'Rubik'; font-weight:700; font-size:6vh; margin:4.5vh 0; padding:1.6vh 4vw;
+    border-top:2px solid rgba(255,255,255,.4); border-bottom:2px solid rgba(255,255,255,.4);
+  }
+  .alert-instruction{font-size:4.2vh; font-weight:600; line-height:1.5; max-width:74vw}
+  .alert-timer{
+    font-variant-numeric:tabular-nums; direction:ltr; font-size:4.4vh; font-weight:300;
+    margin-top:3.5vh; color:#F4CBC6; letter-spacing:.05em;
+  }
+  .alert-disc{
+    position:absolute; bottom:3.5vh; font-size:2.1vh; font-weight:400; color:#EDBCB6; max-width:82vw;
+  }
+  /* חיווי חיבור לערוץ ההתראות בפוטר */
+  .alert-conn{
+    display:flex; align-items:center; gap:.6vw; padding:0 1.2vw; font-size:1.7vh; font-weight:600;
+    white-space:nowrap; border-inline-start:1px solid rgba(255,255,255,.12); color:#7BBF97;
+  }
+  .alert-conn .dot{width:1vh; height:1vh; border-radius:50%; background:#7BBF97}
+  .alert-conn.off{color:#D98A83} .alert-conn.off .dot{background:#D98A83}
+
   @media (prefers-reduced-motion:reduce){
     .slide.on{animation:none} .progress i.run{animation:none; width:100%}
+    #alertOverlay::before{animation:none}
   }
 </style>
 </head>
@@ -283,8 +330,23 @@
 <footer>
   <div class="ticker-label">מבזקים · ynet</div>
   <div class="ticker-viewport" id="tickerViewport"><div class="ticker-track" id="ticker"></div></div>
+  <div class="alert-conn off" id="alertConn"><span class="dot"></span><span id="alertConnTxt">התרעות</span></div>
   <div class="status" id="status">מתחבר…</div>
 </footer>
+
+<div id="alertOverlay">
+  <div class="alert-top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#F4CBC6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17.5" x2="12" y2="17.5"/></svg>
+    <span>התרעת פיקוד העורף</span>
+  </div>
+  <div class="alert-drill">תרגיל</div>
+  <div class="alert-threat" id="alertThreat">צבע אדום</div>
+  <div class="alert-threat-sub" id="alertThreatSub">ירי רקטות וטילים</div>
+  <div class="alert-area" id="alertArea">אשקלון</div>
+  <div class="alert-instruction" id="alertInstruction"></div>
+  <div class="alert-timer" id="alertTimer">10:00</div>
+  <div class="alert-disc">מקור: מערכת צופר (בלתי־רשמי) · אמצעי עזר בלבד — יש לפעול אך ורק לפי הנחיות פיקוד העורף הרשמיות ולפי הצופרים בשטח</div>
+</div>
 
 <script>
 /* ================== הגדרות ================== */
@@ -300,8 +362,30 @@ const CONFIG = {
   MAX_PER_DAY: 5,
   MAX_UPDATES: 3,
   MAX_BDAY: 3,
-  RELOAD_HOUR: 3
+  RELOAD_HOUR: 3,
+  ALERT: {
+    ENABLED: true,
+    WS_URL: "wss://ws.tzevaadom.co.il/socket?platform=WEB",
+    AREAS: ["אשקלון"],   // ערים שמפעילות השתלטות. ריק [] + MATCH_ALL:true = כל הארץ
+    MATCH_ALL: false,     // true = הצג כל אזעקה בארץ
+    SHELTER_MIN: 10,      // כמה דקות ההשתלטות נשארת על המסך
+    SIREN_SEC: 40,        // כמה שניות הצליל מתנגן (הוויזואל נשאר לכל המשך)
+    SOUND: true
+  }
 };
+
+/* מיפוי סוגי איום של צופר (עלול להשתנות; ברירת מחדל להתרעה כללית) */
+const THREATS = {
+  0: {name:"צבע אדום",              sub:"ירי רקטות וטילים"},
+  1: {name:"חדירת כלי טיס עוין",     sub:"כטב״מ / מזל״ט"},
+  2: {name:"רעידת אדמה",             sub:""},
+  3: {name:"חשש לצונאמי",            sub:""},
+  4: {name:"חדירת מחבלים",           sub:""},
+  5: {name:"אירוע חומרים מסוכנים",    sub:""},
+  6: {name:"ירי בלתי קונבנציונלי",    sub:""},
+  7: {name:"התרעה",                  sub:""}
+};
+function threatOf(code){ return THREATS[code] || {name:"התרעת פיקוד העורף", sub:""}; }
 
 const DAY_NAMES = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
 const MONTHS_HE = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
@@ -661,7 +745,7 @@ function goFullscreen(){
   if(fn) try{ fn.call(el); }catch(e){}
 }
 const gate = document.getElementById("fsGate");
-function enterFromGate(){ goFullscreen(); gate.style.display="none"; }
+function enterFromGate(){ unlockAudio(); goFullscreen(); gate.style.display="none"; }
 gate.addEventListener("click", enterFromGate);
 window.addEventListener("keydown", e=>{ if(gate.style.display!=="none"){ enterFromGate(); } }, {once:false});
 
@@ -671,6 +755,119 @@ window.addEventListener("keydown", e=>{ if(gate.style.display!=="none"){ enterFr
 document.addEventListener("keydown", e=>{
   if((e.ctrlKey||e.metaKey) && ["c","x","a","s","p","u"].includes(e.key.toLowerCase())) e.preventDefault();
 });
+
+/* ================== מנוע התרעות (צופר · בזמן אמת) ==================
+   רץ בצד הלקוח מה-IP הישראלי של המחשב במשרד (עוקף גיאו-חסימה).
+   בלתי־רשמי — מוצג עם חיווי חיבור, כפתור בדיקה, וכיתוב "אמצעי עזר בלבד". */
+let audioCtx = null, sirenOsc = null;
+function unlockAudio(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === "suspended") audioCtx.resume();
+  }catch(e){}
+}
+function playSiren(seconds){
+  if(!CONFIG.ALERT.SOUND || !audioCtx) return;
+  stopSiren();
+  const t0 = audioCtx.currentTime, dur = seconds, period = 1.4;
+  const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+  osc.type = "sawtooth"; osc.connect(gain); gain.connect(audioCtx.destination);
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.15);
+  let t = t0;
+  for(let i=0; i<Math.ceil(dur/period); i++){
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.linearRampToValueAtTime(1150, t + period/2);
+    osc.frequency.linearRampToValueAtTime(600, t + period);
+    t += period;
+  }
+  gain.gain.setValueAtTime(0.22, t0 + dur - 0.3);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.start(t0); osc.stop(t0 + dur);
+  sirenOsc = osc;
+}
+function stopSiren(){ if(sirenOsc){ try{ sirenOsc.stop(); }catch(e){} sirenOsc = null; } }
+
+/* חיווי חיבור */
+function setAlertConn(ok){
+  const el = document.getElementById("alertConn");
+  el.classList.toggle("off", !ok);
+  document.getElementById("alertConnTxt").textContent = ok ? "התרעות ✓" : "התרעות ✗";
+}
+
+/* חיבור WebSocket עם חיבור-מחדש אוטומטי */
+let alertWS = null, wsReconnect = null;
+function connectAlerts(){
+  if(!CONFIG.ALERT.ENABLED) return;
+  try{ alertWS = new WebSocket(CONFIG.ALERT.WS_URL); }
+  catch(e){ setAlertConn(false); scheduleReconnect(); return; }
+  alertWS.onopen    = ()=> setAlertConn(true);
+  alertWS.onmessage = e => handleAlertMessage(e.data);
+  alertWS.onerror   = ()=>{ try{ alertWS.close(); }catch(e){} };
+  alertWS.onclose   = ()=>{ setAlertConn(false); scheduleReconnect(); };
+}
+function scheduleReconnect(){ clearTimeout(wsReconnect); wsReconnect = setTimeout(connectAlerts, 4000); }
+
+/* פענוח הודעה — עמיד לשינויי מבנה */
+function handleAlertMessage(raw){
+  let msg; try{ msg = JSON.parse(raw); }catch(e){ return; }
+  const type = String(msg.type || msg.notificationType || "").toUpperCase();
+  if(type && type.indexOf("ALERT") === -1 && type !== "") return; // מתעלמים מהודעות מערכת/ping
+  const data = msg.data || msg;
+  const cities = data.cities || data.Cities || [];
+  if(!Array.isArray(cities) || !cities.length) return;
+  const threat = (typeof data.threat === "number") ? data.threat : 0;
+  const isDrill = !!(data.isDrill || data.is_drill);
+  triggerAlert(cities, threat, isDrill);
+}
+
+/* סינון לאזורים שהוגדרו */
+function citiesMatch(cities){
+  if(CONFIG.ALERT.MATCH_ALL || !CONFIG.ALERT.AREAS.length) return cities;
+  return cities.filter(c => CONFIG.ALERT.AREAS.some(a => String(c).includes(a) || a.includes(String(c))));
+}
+
+let alertTimer = null, alertCountdown = null;
+function triggerAlert(cities, threat, isDrill){
+  const relevant = citiesMatch(cities);
+  if(!relevant.length) return;           // אזעקה מחוץ לאזורים שלנו — לא משתלטים
+  const th = threatOf(threat);
+  const ov = document.getElementById("alertOverlay");
+  document.getElementById("alertThreat").textContent = th.name;
+  document.getElementById("alertThreatSub").textContent = th.sub;
+  document.getElementById("alertThreatSub").style.display = th.sub ? "block" : "none";
+  document.getElementById("alertArea").textContent = relevant.join(" · ");
+  document.getElementById("alertInstruction").textContent =
+    `יש להישאר במרחב המוגן כ-${CONFIG.ALERT.SHELTER_MIN} דקות, או עד לקבלת הודעה מתאימה`;
+  ov.classList.toggle("drill", isDrill);
+  ov.classList.add("on");
+
+  unlockAudio(); playSiren(CONFIG.ALERT.SIREN_SEC);
+
+  /* ספירה לאחור */
+  let left = CONFIG.ALERT.SHELTER_MIN * 60;
+  const tEl = document.getElementById("alertTimer");
+  const render = ()=>{ tEl.textContent = `${p(Math.floor(left/60))}:${p(left%60)}`; };
+  render();
+  clearInterval(alertCountdown);
+  alertCountdown = setInterval(()=>{ left--; render(); if(left<=0) clearAlert(); }, 1000);
+
+  clearTimeout(alertTimer);
+  alertTimer = setTimeout(clearAlert, CONFIG.ALERT.SHELTER_MIN * 60000);
+}
+function clearAlert(){
+  document.getElementById("alertOverlay").classList.remove("on","drill");
+  clearInterval(alertCountdown); clearTimeout(alertTimer); stopSiren();
+}
+
+/* בדיקה ידנית: T = הדמיית התרעה (מסומנת כתרגיל) · C / Esc = ניקוי */
+document.addEventListener("keydown", e=>{
+  const k = e.key.toLowerCase();
+  if(k === "t"){ unlockAudio(); triggerAlert([CONFIG.ALERT.AREAS[0] || "אשקלון"], 0, true); }
+  else if(k === "c" || e.key === "Escape"){ clearAlert(); }
+});
+
+connectAlerts();
 
 document.getElementById("unitName").textContent = CONFIG.UNIT_NAME;
 document.getElementById("unitSub").textContent = CONFIG.UNIT_SUB;
